@@ -97,9 +97,31 @@ define
         {Put D2 Str2 {CondGet D2 Str2 0}+1}
     end
 
+%%%%%%%%%%%%%%%% 2-Grammes
+
+    fun {MpM2 D L}
+       case L
+       of H|T then
+          case T
+          of X|Y then
+    	 case Y
+    	 of V|W then
+    	    {AddDico D {StringToAtom {List.append {AtomToString H} {AtomToString X}}} V}
+    	    {MpM2 D T}
+    	 [] nil then {MpM2 D T}
+    	 end
+          [] nil then D
+          end
+       [] nil then D
+       end
+    end
+
+
+
     % Thread de parsing basé sur les slides 33 du CM10
 
-    fun {NewPortObject Init F}
+
+ fun {NewPortObject Init F}
         proc {Loop S State}
             case S of H|T then {Loop T {F H State}}
             [] nil then skip
@@ -119,8 +141,28 @@ define
     end
 
     Dgram1 = {NewPortObject {NewDictionary} F} %Création du dictionnaire 1-gramme
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+fun {NewPortObject2 Init2 F2}
+        proc {Loop2 S2 State2}
+            case S2 of H|T then {Loop2 T {F2 H State2}}
+            [] nil then skip
+            end 
+        end
+        P2
+    in 
+        thread S2 in P2 = {NewPort S2} {Loop2 S2 Init2} end 
+        P2
+    end
 
+    fun {F2 L State2}
+        case L
+        of put2(T) then {MpM2 State2 {CharsToWords nil T}}
+        [] take2(Dico2g) then Dico2g = State2 Dico2g
+        end
+    end
 
+    Dgram2 = {NewPortObject2 {NewDictionary} F2} %Création du dictionnaire 2-grammes
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  %%%Lit un fichier ligne par ligne en entier et remplit les superDico 0 et 1
 
     proc{ReadFile FILENAME N }
@@ -131,6 +173,7 @@ define
         else 
         {Show Line}
             {Send Dgram1 put(Line)}
+            {Send Dgram2 put2(Line)}
             {ReadFile FILENAME N+1}
         end
     end
@@ -167,6 +210,14 @@ define
     proc {Press} Word in
        Word = {CharsToWords nil {Text1 getText(p(1 0) 'end' $)}}
        if (Word == nil) then {Text2 tk(insert 'end'  {StringToAtom {List.append "Le 0-Gramme des tweets est : " {AtomToString{Gram0 Dgram0}}}})} {Text2 tk(insert 'end' ' ')}
+       elseif ({List.length Word} == 2) then
+            local Dico WordDico in
+             {Send Dgram2 take2(Dico)}
+             WordDico = {Dictionary.condGet Dico  {StringToAtom {List.append {AtomToString {List.nth Word 1}} {AtomToString {List.last Word}}}} nil}
+             case WordDico
+                 of nil then {Browse {StringToAtom "Ces mots ne siéent pas à Trump, trouvez en des meilleurs !"}}
+                 else {Text2 tk(insert 'end'  {Gram0 WordDico})} {Text2 tk(insert 'end' ' ')} end
+             end
        else
             local Dico WordDico in
              {Send Dgram1 take(Dico)}
@@ -181,9 +232,14 @@ define
     
     W={QTk.build Description}
     {W show}
-    {Browse {StringToAtom "Veuillez attendre la fin des threads dans le Browse"}}
+    {Browse {StringToAtom "Veuillez attendre la fin des threads dans le Browser"}}
     {Browse {StringToAtom {List.append "En attendant la fin, voici le 0-Gramme des premiers tweets lus : " {AtomToString{Gram0 Dgram0}}}}}
-    {Browse {StringToAtom "Veuillez laisser la case vide et cliquer sur le bouton directement si vous voulez le 0-Gramm final"}}
+    {Browse {StringToAtom "A la fin de la compilation (durée estimée 3 minutes et 20 secondes),"}}
+    {Browse {StringToAtom "Vous aurez 3 possibilités différentes :"}}
+    {Browse {StringToAtom "Rien mettre et cliquer sur le bouton : Il affichera le 0-gramme "}}
+    {Browse {StringToAtom "Mettre 1 mot et cliquer sur le bouton : Il affichera le 1-gramme du mot"}}
+    {Browse {StringToAtom "Mettre 2 mots et cliquer sur le bouton : Il affichera le 2-grammes des mots"}}
+    {Browse {StringToAtom "Si vous affichez plus, le 1-gramme du dernier mot sera affiché"}}
    
 
     %%%%%%%%%%%%% Autres méthodes de lecture de fichiers, la première n'est pas totalement fonctionnelle
